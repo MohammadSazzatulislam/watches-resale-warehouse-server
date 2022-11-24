@@ -2,7 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const app = express()
 const port = process.env.PORT || 5000
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require('dotenv').config()
 
 
@@ -18,10 +18,11 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
- function run() {
+async function run() {
   try {
     
     const categoryCollection = client.db("watchWerehouse").collection('categories')
+    const productsCollection = client.db("watchWerehouse").collection('products')
 
     app.get("/", (req, res) => {
       res.send("watches api is comming soon");
@@ -34,6 +35,15 @@ const client = new MongoClient(uri, {
       res.send(result)
     })
 
+    app.get("/product/:name", async (req, res) => {
+      const name = req.params.name;
+      console.log(name);
+      const query = { category: name };
+      const result = await productsCollection.find(query).toArray();
+      res.send(result);
+      
+    });
+
 
 
 
@@ -42,7 +52,7 @@ const client = new MongoClient(uri, {
   }
 }
 
-run()
+run().catch(err=> console.log(err.message))
 
 
 
