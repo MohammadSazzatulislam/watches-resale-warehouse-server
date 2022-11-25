@@ -50,6 +50,12 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/product', async (req, res) => {
+      const userEmail = req.query.email;
+      const filter = { email: userEmail }
+      const result = await addProductCollection.find(filter).toArray()
+      res.send(result)
+    })
     
 
 
