@@ -23,6 +23,7 @@ async function run() {
     
     const categoryCollection = client.db("watchWerehouse").collection('categories')
     const productsCollection = client.db("watchWerehouse").collection('products')
+    const addProductCollection = client.db("watchWerehouse").collection('booked')
 
     app.get("/", (req, res) => {
       res.send("watches api is comming soon");
@@ -37,13 +38,19 @@ async function run() {
 
     app.get("/product/:name", async (req, res) => {
       const name = req.params.name;
-      console.log(name);
       const query = { category: name };
       const result = await productsCollection.find(query).toArray();
       res.send(result);
       
     });
 
+    app.post('/product', async(req, res)=> {
+      const booked = req.body;
+      const result = await addProductCollection.insertOne(booked)
+      res.send(result)
+    })
+
+    
 
 
 
