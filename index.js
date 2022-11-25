@@ -66,20 +66,16 @@ async function run() {
       res.send(result);
     });
 
-     app.get("/users/seller/:email", async (req, res) => {
+    app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email };
       const user = await usersCollection.findOne(query);
-      res.send({ isSeller: user?.selectOption === "Seller" });
-     });
-    
-     app.get("/users/buyer/:email", async (req, res) => {
-      const email = req.params.email;
-      const query = { email };
-      const user = await usersCollection.findOne(query);
-      res.send({ isBuyer: user?.selectOption === "Buyers" });
-     });
-    
+      console.log(user);
+      if (user?.option === "Seller") {
+        return res.send({ isSeller: user?.option === "Seller" });
+      }
+      res.send({ isBuyers: user?.option === "Buyers" });
+    });
   } finally {
   }
 }
