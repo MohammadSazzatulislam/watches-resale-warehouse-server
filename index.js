@@ -59,9 +59,16 @@ async function run() {
       res.send(result)
     })
 
-    app.post('/users', async(req, res)=> {
+    app.post("/users", async (req, res) => {
       const user = req.body;
-      const result = await usersCollection.insertOne(user)
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.get('/users', async (req, res) => {
+      const userEmail = req.query.email;
+      const filter = { userEmail: userEmail };
+      const result = await usersCollection.findOne(filter)
       res.send(result)
     })
     
