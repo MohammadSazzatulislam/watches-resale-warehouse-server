@@ -28,7 +28,6 @@ async function run() {
       .db("watchWerehouse")
       .collection("booked");
     const usersCollection = client.db("watchWerehouse").collection("users");
-   
 
     app.get("/", (req, res) => {
       res.send("watches api is comming soon");
@@ -78,15 +77,20 @@ async function run() {
       res.send({ isAdmin: user?.option === "Admin" });
     });
 
-
-    app.post('/addProduct', async (req, res)=> {
+    app.post("/addProduct", async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
-
-
+    app.get("/addProduct/:email", async (req, res) => {
+      const userEmail = req.params.email;
+      console.log(userEmail);
+      const filter = { sellerEmail: userEmail };
+      const result = await productsCollection.find(filter).toArray();
+      console.log(result);
+      res.send(result);
+    });
   } finally {
   }
 }
