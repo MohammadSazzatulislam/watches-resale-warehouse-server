@@ -66,7 +66,6 @@ async function run() {
       res.send(result);
     });
 
-
     app.get("/product", async (req, res) => {
       const userEmail = req.query.email;
       const filter = { userEmail };
@@ -74,9 +73,36 @@ async function run() {
       res.send(result);
     });
 
+    app.delete("/product/:id", async (req, res) => {
+      const productId = req.params.id;
+      const filter = { _id: ObjectId(productId) };
+      const option = { upsert: true };
+      const updateDoc = {
+        $set: {
+          stutas: "In stock",
+        },
+      };
+      const upDateProduct = await productsCollection.updateOne(
+        filter,
+        updateDoc,
+        option
+      );
+      console.log(upDateProduct);
+      const id = req.params.id;
+      const query = { productId: id };
+      const result = await addProductCollection.deleteOne(query);
+      res.send(result);
+    });
+
     app.post("/users", async (req, res) => {
       const user = req.body;
       const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.get("/users/buyers", async (req, res) => {
+      const filter = { option: "Buyers" };
+      const result = await usersCollection.find(filter).toArray();
       res.send(result);
     });
 
@@ -98,19 +124,17 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/addProduct/:id', async(req, res) =>{
+    app.delete("/addProduct/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id: ObjectId(id) }
-      const result = await productsCollection.deleteOne(filter)
-      res.send(result)
-    })
+      const filter = { _id: ObjectId(id) };
+      const result = await productsCollection.deleteOne(filter);
+      res.send(result);
+    });
 
     app.get("/addProduct/:email", async (req, res) => {
       const userEmail = req.params.email;
-      console.log(userEmail);
       const filter = { sellerEmail: userEmail };
       const result = await productsCollection.find(filter).toArray();
-      console.log(result);
       res.send(result);
     });
   } finally {
