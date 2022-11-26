@@ -28,6 +28,7 @@ async function run() {
       .db("watchWerehouse")
       .collection("booked");
     const usersCollection = client.db("watchWerehouse").collection("users");
+   
 
     app.get("/", (req, res) => {
       res.send("watches api is comming soon");
@@ -54,7 +55,6 @@ async function run() {
 
     app.get("/product", async (req, res) => {
       const userEmail = req.query.email;
-      console.log(userEmail);
       const filter = { userEmail };
       const result = await addProductCollection.find(filter).toArray();
       res.send(result);
@@ -70,12 +70,23 @@ async function run() {
       const email = req.params.email;
       const query = { email };
       const user = await usersCollection.findOne(query);
-      console.log(user);
       if (user?.option === "Seller") {
         return res.send({ isSeller: user?.option === "Seller" });
+      } else if (user?.option === "Buyers") {
+        return res.send({ isBuyers: user?.option === "Buyers" });
       }
-      res.send({ isBuyers: user?.option === "Buyers" });
+      res.send({ isAdmin: user?.option === "Admin" });
     });
+
+
+    app.post('/addProduct', async (req, res)=> {
+      const product = req.body;
+      const result = await productsCollection.insertOne(product);
+      res.send(result)
+    })
+
+
+
   } finally {
   }
 }
