@@ -106,12 +106,25 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/users/sellers", async (req, res) => {
+      const filter = { option: "Seller" };
+      const result = await usersCollection.find(filter).toArray();
+      res.send(result);
+    });
+
     app.delete('/users/buyers/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await usersCollection.deleteOne(filter)
       res.send(result)
     })
+    
+    app.delete("/users/sellers/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await usersCollection.deleteOne(filter);
+      res.send(result);
+    });
 
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
