@@ -98,6 +98,13 @@ async function run() {
       res.send(result);
     });
 
+    app.delete('/addProduct/:id', async(req, res) =>{
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) }
+      const result = await productsCollection.deleteOne(filter)
+      res.send(result)
+    })
+
     app.get("/addProduct/:email", async (req, res) => {
       const userEmail = req.params.email;
       console.log(userEmail);
