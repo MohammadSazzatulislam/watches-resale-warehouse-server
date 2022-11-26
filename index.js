@@ -46,11 +46,26 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/product", async (req, res) => {
+    app.post("/product/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const option = { upsert: true };
+      const updateDoc = {
+        $set: {
+          stutas: "stock out",
+        },
+      };
+      const upDateProduct = await productsCollection.updateOne(
+        filter,
+        updateDoc,
+        option
+      );
+
       const booked = req.body;
       const result = await addProductCollection.insertOne(booked);
       res.send(result);
     });
+
 
     app.get("/product", async (req, res) => {
       const userEmail = req.query.email;
