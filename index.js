@@ -157,6 +157,23 @@ async function run() {
       const result = await productsCollection.find(filter).toArray();
       res.send(result);
     });
+
+
+    app.put('/verify/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) }
+      const option = { upsert: true }
+      const updateDoc = {
+        $set: {
+          stutas : 'verifyed'
+        }
+      }
+      const result = await usersCollection.updateOne(filter, updateDoc, option)
+      res.send(result)
+
+   })
+
+
   } finally {
   }
 }
