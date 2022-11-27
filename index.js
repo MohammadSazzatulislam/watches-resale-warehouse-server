@@ -3,6 +3,7 @@ const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 app.use(cors());
@@ -15,6 +16,31 @@ const client = new MongoClient(uri, {
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
+
+function veryJwt(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: "Unauthorization Access" });
+  }
+  jwt.verify(authHeader, process.env.ACCESS_TOKEN, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: "forbidden Access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
+
+  // const verifyAdmin = async (req, res, next) => {
+  //   const decodedEmail = req.decoded.email;
+  //   const query = { decodedEmail };
+  //   const user = await usersCollection.findOne(query);
+
+  //   if (user?.role !== "admin") {
+  //     return res.status(403).send({ message: "forbidden access" });
+  //   }
+  //   next();
+  // };
 
 async function run() {
   try {
@@ -31,6 +57,19 @@ async function run() {
 
     app.get("/", (req, res) => {
       res.send("watches api is comming soon");
+    });
+
+    app.get("/jwt", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const users = await usersCollection.findOne(query);
+      if (users) {
+        const token = jwt.sign({ users }, process.env.ACCESS_TOKEN, {
+          expiresIn: "2d",
+        });
+        return res.send({ token });
+      }
+      res.status(403).send({ message: "forbidden access" });
     });
 
     app.get("/category", async (req, res) => {
@@ -137,7 +176,7 @@ async function run() {
       res.send({ isAdmin: user?.option === "Admin" });
     });
 
-    app.post("/addProduct/:email", async (req, res) => {
+    app.post("/addProduct", async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
       res.send(result);
@@ -153,22 +192,22 @@ async function run() {
     app.get("/addProduct/:email", async (req, res) => {
       const userEmail = req.params.email;
       const filter = { sellerEmail: userEmail };
-       const users = { email: userEmail };
-       const allUsers = await usersCollection.findOne(users);
-       if (allUsers.verify === "verifyed") {
-         const option = { upsert: true };
-         const query = { sellerEmail: userEmail };
-         const updateDoc = {
-           $set: {
-             verify: "verifyed",
-           },
-         };
-         const updateProducts = await productsCollection.updateMany(
-           query,
-           updateDoc,
-           option
-         );
-       }
+      const users = { email: userEmail };
+      const allUsers = await usersCollection.findOne(users);
+      if (allUsers.verify === "verifyed") {
+        const option = { upsert: true };
+        const query = { sellerEmail: userEmail };
+        const updateDoc = {
+          $set: {
+            verify: "verifyed",
+          },
+        };
+        const updateProducts = await productsCollection.updateMany(
+          query,
+          updateDoc,
+          option
+        );
+      }
       const result = await productsCollection.find(filter).toArray();
       res.send(result);
     });
@@ -184,11 +223,46 @@ async function run() {
       const query = { sellerEmail: userEmail };
       const allSellerProduct = await productsCollection.updateMany(
         query,
-        updateDoc,
+        updateDoc
       );
       const result = await usersCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
+
+    
+    // app.post("/create-payment-intent", async (req, res) => {
+    //   const booking = req.body;
+    //   const amount = booking.price * 100;
+
+    //   // Create a PaymentIntent with the order amount and currency
+    //   const paymentIntent = await stripe.paymentIntents.create({
+    //     amount: amount,
+    //     currency: "usd",
+    //     payment_method_types: ["card"],
+    //   });
+
+    //   res.send({
+    //     clientSecret: paymentIntent.client_secret,
+    //   });
+    // });
+
+    // app.post("/payments", async (req, res) => {
+    //   const payment = req.body;
+    //   const result = await paymentsCollection.insertOne(payment);
+    //   const id = payment.bookingId;
+    //   const filter = { _id: ObjectId(id) };
+    //   const updateDoc = {
+    //     $set: {
+    //       paid: true,
+    //     },
+    //   };
+    //   const bookings = await bookingsCollection.updateOne(filter, updateDoc);
+
+    //   res.send(result);
+    // });
+
+
+
   } finally {
   }
 }
