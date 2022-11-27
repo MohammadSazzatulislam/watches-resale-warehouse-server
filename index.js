@@ -31,17 +31,6 @@ function veryJwt(req, res, next) {
   });
 }
 
-const verifyAdmin = async (req, res, next) => {
-  const decodedEmail = req.decoded.email;
-  const query = { decodedEmail };
-  const user = await usersCollection.findOne(query);
-
-  if (user?.option !== "Admin") {
-    return res.status(403).send({ message: "forbidden access" });
-  }
-  next();
-};
-
 async function run() {
   try {
     const categoryCollection = client
@@ -54,14 +43,26 @@ async function run() {
       .db("watchWerehouse")
       .collection("booked");
     const usersCollection = client.db("watchWerehouse").collection("users");
+    const paymentsCollection = client.db("watchWerehouse").collection("payments");
 
     app.get("/", (req, res) => {
       res.send("watches api is comming soon");
     });
 
-    app.get("/jwt", async (req, res) => {
-      const email = req.query.email;
-      const query = { email: email };
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const query = { decodedEmail };
+      const user = await usersCollection.findOne(query);
+
+      if (user?.option !== "Admin") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
+    app.get("/jwt/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
       const users = await usersCollection.findOne(query);
       if (users) {
         const token = jwt.sign({ users }, process.env.ACCESS_TOKEN, {
@@ -138,26 +139,26 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/buyers", veryJwt, verifyAdmin, async (req, res) => {
+    app.get("/users/buyers", veryJwt,  async (req, res) => {
       const filter = { option: "Buyers" };
       const result = await usersCollection.find(filter).toArray();
       res.send(result);
     });
 
-    app.get("/users/sellers", veryJwt, verifyAdmin, async (req, res) => {
+    app.get("/users/sellers", veryJwt,  async (req, res) => {
       const filter = { option: "Seller" };
       const result = await usersCollection.find(filter).toArray();
       res.send(result);
     });
 
-    app.delete("/users/buyers/:id", veryJwt, verifyAdmin, async (req, res) => {
+    app.delete("/users/buyers/:id", veryJwt,  async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await usersCollection.deleteOne(filter);
       res.send(result);
     });
 
-    app.delete("/users/sellers/:id", veryJwt, verifyAdmin, async (req, res) => {
+    app.delete("/users/sellers/:id", veryJwt,  async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await usersCollection.deleteOne(filter);
@@ -173,7 +174,7 @@ async function run() {
       } else if (user?.option === "Buyers") {
         return res.send({ isBuyers: user?.option === "Buyers" });
       }
-      res.send({ isAdmin: user?.option === "Admin" });
+      return res.send({ isAdmin: user?.option === "Admin" });
     });
 
     app.post("/addProduct", veryJwt, async (req, res) => {
@@ -212,7 +213,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/verify/:email", veryJwt, verifyAdmin, async (req, res) => {
+    app.put("/verify/:email", veryJwt,  async (req, res) => {
       const userEmail = req.params.email;
       const filter = { email: userEmail };
       const updateDoc = {
@@ -229,36 +230,36 @@ async function run() {
       res.send(result);
     });
 
-    // app.post("/create-payment-intent", async (req, res) => {
-    //   const booking = req.body;
-    //   const amount = booking.price * 100;
+    app.post("/create-payment-intent", async (req, res) => {
+      const booking = req.body;
+      const amount = booking.price * 100;
 
-    //   // Create a PaymentIntent with the order amount and currency
-    //   const paymentIntent = await stripe.paymentIntents.create({
-    //     amount: amount,
-    //     currency: "usd",
-    //     payment_method_types: ["card"],
-    //   });
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
 
-    //   res.send({
-    //     clientSecret: paymentIntent.client_secret,
-    //   });
-    // });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
 
-    // app.post("/payments", async (req, res) => {
-    //   const payment = req.body;
-    //   const result = await paymentsCollection.insertOne(payment);
-    //   const id = payment.bookingId;
-    //   const filter = { _id: ObjectId(id) };
-    //   const updateDoc = {
-    //     $set: {
-    //       paid: true,
-    //     },
-    //   };
-    //   const bookings = await bookingsCollection.updateOne(filter, updateDoc);
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const result = await paymentsCollection.insertOne(payment);
+      const id = payment.bookingId;
+      const filter = { _id: ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          paid: true,
+        },
+      };
+      const bookings = await addProductCollection.updateOne(filter, updateDoc);
 
-    //   res.send(result);
-    // });
+      res.send(result);
+    });
   } finally {
   }
 }
