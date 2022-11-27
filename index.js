@@ -87,7 +87,6 @@ async function run() {
         updateDoc,
         option
       );
-      console.log(upDateProduct);
       const id = req.params.id;
       const query = { productId: id };
       const result = await addProductCollection.deleteOne(query);
@@ -112,13 +111,13 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/users/buyers/:id', async (req, res) => {
+    app.delete("/users/buyers/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
-      const result = await usersCollection.deleteOne(filter)
-      res.send(result)
-    })
-    
+      const result = await usersCollection.deleteOne(filter);
+      res.send(result);
+    });
+
     app.delete("/users/sellers/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
@@ -138,7 +137,7 @@ async function run() {
       res.send({ isAdmin: user?.option === "Admin" });
     });
 
-    app.post("/addProduct", async (req, res) => {
+    app.post("/addProduct/:email", async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
       res.send(result);
@@ -154,26 +153,42 @@ async function run() {
     app.get("/addProduct/:email", async (req, res) => {
       const userEmail = req.params.email;
       const filter = { sellerEmail: userEmail };
+       const users = { email: userEmail };
+       const allUsers = await usersCollection.findOne(users);
+       if (allUsers.verify === "verifyed") {
+         const option = { upsert: true };
+         const query = { sellerEmail: userEmail };
+         const updateDoc = {
+           $set: {
+             verify: "verifyed",
+           },
+         };
+         const updateProducts = await productsCollection.updateMany(
+           query,
+           updateDoc,
+           option
+         );
+       }
       const result = await productsCollection.find(filter).toArray();
       res.send(result);
     });
 
-
-    app.put('/verify/:id', async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: ObjectId(id) }
-      const option = { upsert: true }
+    app.put("/verify/:email", async (req, res) => {
+      const userEmail = req.params.email;
+      const filter = { email: userEmail };
       const updateDoc = {
         $set: {
-          stutas : 'verifyed'
-        }
-      }
-      const result = await usersCollection.updateOne(filter, updateDoc, option)
-      res.send(result)
-
-   })
-
-
+          verify: "verifyed",
+        },
+      };
+      const query = { sellerEmail: userEmail };
+      const allSellerProduct = await productsCollection.updateMany(
+        query,
+        updateDoc,
+      );
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
   } finally {
   }
 }
