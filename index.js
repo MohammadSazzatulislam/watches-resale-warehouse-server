@@ -31,16 +31,16 @@ function veryJwt(req, res, next) {
   });
 }
 
-  // const verifyAdmin = async (req, res, next) => {
-  //   const decodedEmail = req.decoded.email;
-  //   const query = { decodedEmail };
-  //   const user = await usersCollection.findOne(query);
+const verifyAdmin = async (req, res, next) => {
+  const decodedEmail = req.decoded.email;
+  const query = { decodedEmail };
+  const user = await usersCollection.findOne(query);
 
-  //   if (user?.role !== "admin") {
-  //     return res.status(403).send({ message: "forbidden access" });
-  //   }
-  //   next();
-  // };
+  if (user?.option !== "Admin") {
+    return res.status(403).send({ message: "forbidden access" });
+  }
+  next();
+};
 
 async function run() {
   try {
@@ -78,7 +78,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/product/:name", async (req, res) => {
+    app.get("/product/:name", veryJwt, async (req, res) => {
       const name = req.params.name;
       const query = { category: name };
       const result = await productsCollection.find(query).toArray();
@@ -105,14 +105,14 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/product", async (req, res) => {
+    app.get("/product", veryJwt, async (req, res) => {
       const userEmail = req.query.email;
       const filter = { userEmail };
       const result = await addProductCollection.find(filter).toArray();
       res.send(result);
     });
 
-    app.delete("/product/:id", async (req, res) => {
+    app.delete("/product/:id", veryJwt, async (req, res) => {
       const productId = req.params.id;
       const filter = { _id: ObjectId(productId) };
       const option = { upsert: true };
@@ -138,26 +138,26 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/buyers", async (req, res) => {
+    app.get("/users/buyers", veryJwt, verifyAdmin, async (req, res) => {
       const filter = { option: "Buyers" };
       const result = await usersCollection.find(filter).toArray();
       res.send(result);
     });
 
-    app.get("/users/sellers", async (req, res) => {
+    app.get("/users/sellers", veryJwt, verifyAdmin, async (req, res) => {
       const filter = { option: "Seller" };
       const result = await usersCollection.find(filter).toArray();
       res.send(result);
     });
 
-    app.delete("/users/buyers/:id", async (req, res) => {
+    app.delete("/users/buyers/:id", veryJwt, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await usersCollection.deleteOne(filter);
       res.send(result);
     });
 
-    app.delete("/users/sellers/:id", async (req, res) => {
+    app.delete("/users/sellers/:id", veryJwt, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await usersCollection.deleteOne(filter);
@@ -176,20 +176,20 @@ async function run() {
       res.send({ isAdmin: user?.option === "Admin" });
     });
 
-    app.post("/addProduct", async (req, res) => {
+    app.post("/addProduct", veryJwt, async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
       res.send(result);
     });
 
-    app.delete("/addProduct/:id", async (req, res) => {
+    app.delete("/addProduct/:id", veryJwt, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await productsCollection.deleteOne(filter);
       res.send(result);
     });
 
-    app.get("/addProduct/:email", async (req, res) => {
+    app.get("/addProduct/:email", veryJwt, async (req, res) => {
       const userEmail = req.params.email;
       const filter = { sellerEmail: userEmail };
       const users = { email: userEmail };
@@ -212,7 +212,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/verify/:email", async (req, res) => {
+    app.put("/verify/:email", veryJwt, verifyAdmin, async (req, res) => {
       const userEmail = req.params.email;
       const filter = { email: userEmail };
       const updateDoc = {
@@ -229,7 +229,6 @@ async function run() {
       res.send(result);
     });
 
-    
     // app.post("/create-payment-intent", async (req, res) => {
     //   const booking = req.body;
     //   const amount = booking.price * 100;
@@ -260,9 +259,6 @@ async function run() {
 
     //   res.send(result);
     // });
-
-
-
   } finally {
   }
 }
