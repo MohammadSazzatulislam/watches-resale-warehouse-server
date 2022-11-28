@@ -52,17 +52,6 @@ async function run() {
       res.send("watches api is comming soon");
     });
 
-    const verifyAdmin = async (req, res, next) => {
-      const decodedEmail = req.decoded.email;
-      const query = { email: decodedEmail };
-      const user = await usersCollection.findOne(query);
-
-      if (user?.option !== "Admin") {
-        return res.status(403).send({ message: "forbidden access" });
-      }
-      next();
-    };
-
     app.get("/jwt/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email };
@@ -123,19 +112,6 @@ async function run() {
     });
 
     app.delete("/product/:id", veryJwt, async (req, res) => {
-      const productId = req.params.id;
-      const filter = { _id: ObjectId(productId) };
-      const option = { upsert: true };
-      const updateDoc = {
-        $set: {
-          stutas: "In stock",
-        },
-      };
-      const upDateProduct = await productsCollection.updateOne(
-        filter,
-        updateDoc,
-        option
-      );
       const id = req.params.id;
       const query = { productId: id };
       const result = await addProductCollection.deleteOne(query);
@@ -182,8 +158,9 @@ async function run() {
         return res.send({ isSeller: user?.option === "Seller" });
       } else if (user?.option === "Buyers") {
         return res.send({ isBuyers: user?.option === "Buyers" });
+      } else {
+        return res.send({ isAdmin: user?.option === "Admin" });
       }
-      return res.send({ isAdmin: user?.option === "Admin" });
     });
 
     app.post("/addProduct", veryJwt, async (req, res) => {
@@ -239,10 +216,10 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/create-payment-intent", async (req, res) => {
-      const price = req.body;
-      console.log(price);
-      const amount = price * 100;
+    app.post("/create-payment-intent",veryJwt, async (req, res) => {
+      const booking = req.body;
+      const price = booking.sellPrice 
+      const amount = price * 100
 
       // Create a PaymentIntent with the order amount and currency
       const paymentIntent = await stripe.paymentIntents.create({
@@ -256,18 +233,28 @@ async function run() {
       });
     });
 
-    app.post("/payments", async (req, res) => {
+    app.post("/payments",veryJwt, async (req, res) => {
       const payment = req.body;
       const result = await paymentsCollection.insertOne(payment);
       const id = payment.bookingId;
       const filter = { _id: ObjectId(id) };
+      const option = { upsert: true };
       const updateDoc = {
         $set: {
           paid: true,
+          stutas: "Sold Out",
         },
       };
-      const allProducts = await productsCollection.updateOne(filter, updateDoc);
-      const bookings = await addProductCollection.updateOne(filter, updateDoc);
+      const allProducts = await productsCollection.updateOne(
+        filter,
+        updateDoc,
+        option
+      );
+      const bookings = await addProductCollection.updateOne(
+        filter,
+        updateDoc,
+        option
+      );
 
       res.send(result);
     });
