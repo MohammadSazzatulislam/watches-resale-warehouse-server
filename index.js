@@ -5,6 +5,7 @@ const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -43,7 +44,9 @@ async function run() {
       .db("watchWerehouse")
       .collection("booked");
     const usersCollection = client.db("watchWerehouse").collection("users");
-    const paymentsCollection = client.db("watchWerehouse").collection("payments");
+    const paymentsCollection = client
+      .db("watchWerehouse")
+      .collection("payments");
 
     app.get("/", (req, res) => {
       res.send("watches api is comming soon");
@@ -51,7 +54,7 @@ async function run() {
 
     const verifyAdmin = async (req, res, next) => {
       const decodedEmail = req.decoded.email;
-      const query = { decodedEmail };
+      const query = { email: decodedEmail };
       const user = await usersCollection.findOne(query);
 
       if (user?.option !== "Admin") {
@@ -83,25 +86,24 @@ async function run() {
       const name = req.params.name;
       const query = { category: name };
       const result = await productsCollection.find(query).toArray();
-      res.send(result);
+      const filter = result.filter((book) => !book.paid);
+      res.send(filter);
     });
 
-    app.post("/product/:id", async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: ObjectId(id) };
-      const option = { upsert: true };
-      const updateDoc = {
-        $set: {
-          stutas: "stock out",
-        },
-      };
-      const upDateProduct = await productsCollection.updateOne(
-        filter,
-        updateDoc,
-        option
-      );
-
+    app.post("/product", async (req, res) => {
       const booked = req.body;
+      const query = {
+        productId: booked.productId,
+        productName: booked.productName,
+      };
+      const alreadyBooked = await addProductCollection.find(query).toArray();
+      if (alreadyBooked.length) {
+        return res.send({
+          acknowledged: false,
+          message: `You already a booking on ${booked.productName}`,
+        });
+      }
+
       const result = await addProductCollection.insertOne(booked);
       res.send(result);
     });
@@ -110,6 +112,13 @@ async function run() {
       const userEmail = req.query.email;
       const filter = { userEmail };
       const result = await addProductCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.get("/products/:id", async (req, res) => {
+      const bookedId = req.params.id;
+      const filter = { _id: ObjectId(bookedId) };
+      const result = await addProductCollection.findOne(filter);
       res.send(result);
     });
 
@@ -139,26 +148,26 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/buyers", veryJwt,  async (req, res) => {
+    app.get("/users/buyers", veryJwt, async (req, res) => {
       const filter = { option: "Buyers" };
       const result = await usersCollection.find(filter).toArray();
       res.send(result);
     });
 
-    app.get("/users/sellers", veryJwt,  async (req, res) => {
+    app.get("/users/sellers", veryJwt, async (req, res) => {
       const filter = { option: "Seller" };
       const result = await usersCollection.find(filter).toArray();
       res.send(result);
     });
 
-    app.delete("/users/buyers/:id", veryJwt,  async (req, res) => {
+    app.delete("/users/buyers/:id", veryJwt, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await usersCollection.deleteOne(filter);
       res.send(result);
     });
 
-    app.delete("/users/sellers/:id", veryJwt,  async (req, res) => {
+    app.delete("/users/sellers/:id", veryJwt, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await usersCollection.deleteOne(filter);
@@ -213,7 +222,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/verify/:email", veryJwt,  async (req, res) => {
+    app.put("/verify/:email", veryJwt, async (req, res) => {
       const userEmail = req.params.email;
       const filter = { email: userEmail };
       const updateDoc = {
@@ -231,8 +240,9 @@ async function run() {
     });
 
     app.post("/create-payment-intent", async (req, res) => {
-      const booking = req.body;
-      const amount = booking.price * 100;
+      const price = req.body;
+      console.log(price);
+      const amount = price * 100;
 
       // Create a PaymentIntent with the order amount and currency
       const paymentIntent = await stripe.paymentIntents.create({
@@ -256,6 +266,7 @@ async function run() {
           paid: true,
         },
       };
+      const allProducts = await productsCollection.updateOne(filter, updateDoc);
       const bookings = await addProductCollection.updateOne(filter, updateDoc);
 
       res.send(result);
